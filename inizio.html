@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Search Formatter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #EAE7D6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+            color: #5D7B6F;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #A4C3A2;
+            border-radius: 40px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        .search-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        label {
+            font-weight: bold;
+            color: #5D7B6F;
+            margin-right: 10px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 400px;
+            background-color: #B0D4B8;
+            color: #333;
+            margin-right: 10px;
+        }
+        input[type="submit"] {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #5D7B6F;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #A4C3A2;
+        }
+        #status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 16px;
+            color: #5D7B6F;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 800px;
+            overflow-x: auto;
+            display: block;
+            table-layout: fixed;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        #downloadButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #5D7B6F;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #downloadButton:hover {
+            background-color: #A4C3A2;
+        }
+        th {
+            background-color: #A4C3A2;
+            color: #333;
+        }
+
+        tr:nth-child(even) {
+            background-color: #F2F2F2;
+        }
+
+        th:nth-child(1), td:nth-child(1) {
+            width: 25%;
+        }
+
+        th:nth-child(2), td:nth-child(2) {
+            width: 35%;
+        }
+
+        th:nth-child(3), td:nth-child(3) {
+            width: 40%;
+        }
+
+        @media (max-width: 600px) {
+            form {
+                flex-direction: column;
+                width: 90%;
+                padding: 10px;
+            }
+            .search-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            input[type="text"] {
+                font-size: 14px;
+                width: 100%;
+            }
+            input[type="submit"] {
+                font-size: 14px;
+                width: 100%;
+                padding: 10px;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 8px;
+            }
+            #downloadButton {
+                font-size: 14px;
+                width: 100%;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Search Formatter</h1>
+
+    <form id="searchForm">
+        <div class="search-container">
+            <label for="searchbar">Searchbar:</label>
+            <input type="text" id="searchbar" name="searchbar" required>
+            <input type="submit" value="Submit">
+        </div>
+        <button id="downloadButton" style="display:none;">Download Results</button>
+    </form>
+
+    <p id="status"></p>
+
+    <div id="resultsTableContainer"></div>
+
+    <script>
+        const API_KEY = 'AIzaSyCUqQDjWTEETtvr4hEKTxdQn2XVKmdpX7g';
+        const CSE_ID = 'e35e1e7ecfc834099';
+        let searchResults = [];
+
+        function normalizeDiacritics(text) {
+            return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        async function fetchSearchResults(query) {
+            const url = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CSE_ID}&q=${query}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data.items || data.items.length === 0) {
+                    return 'No results found.';
+                }
+
+                return data.items.map(item => ({
+                    title: item.title,
+                    link: item.link,
+                    snippet: item.snippet
+                }));
+            } catch (error) {
+                console.error("API Error:", error);
+                throw new Error('Error fetching search results.');
+            }
+        }
+
+        function displayResultsInTable(results) {
+            const tableContainer = document.getElementById('resultsTableContainer');
+            tableContainer.innerHTML = ''; 
+
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            const headers = ['Title', 'Link', 'Snippet'];
+            const trHead = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            results.forEach(result => {
+                const tr = document.createElement('tr');
+
+                const tdTitle = document.createElement('td');
+                tdTitle.textContent = result.title;
+                tr.appendChild(tdTitle);
+
+                const tdLink = document.createElement('td');
+                const linkElement = document.createElement('a');
+                linkElement.href = result.link;
+                linkElement.textContent = result.link;
+                linkElement.target = '_blank';
+                tdLink.appendChild(linkElement);
+                tr.appendChild(tdLink);
+
+                const tdSnippet = document.createElement('td');
+                tdSnippet.textContent = result.snippet;
+                tr.appendChild(tdSnippet);
+
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            tableContainer.appendChild(table);
+        }
+
+        function downloadJsonFile(content, filename) {
+            const element = document.createElement('a');
+            const file = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
+            element.href = URL.createObjectURL(file);
+            element.download = filename;
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const query = document.getElementById('searchbar').value;
+            const normalizedQuery = normalizeDiacritics(query);
+            const status = document.getElementById('status');
+            status.textContent = "Fetching results...";
+
+            try {
+                searchResults = await fetchSearchResults(normalizedQuery);
+
+                displayResultsInTable(searchResults);
+
+                document.getElementById('downloadButton').style.display = searchResults !== 'No results found.' ? 'block' : 'none';
+
+                status.textContent = searchResults === 'No results found.' ? "No results found." : "Search results displayed.";
+            } catch (error) {
+                status.textContent = "Error fetching search results. Please contact our support at streblu.ester@gmail.com to remove the error.";
+                console.error("Error:", error);
+            }
+        });
+
+        document.getElementById('downloadButton').addEventListener('click', function() {
+            const query = document.getElementById('searchbar').value;
+            downloadJsonFile(searchResults, `${query}_results.json`);
+        });
+    </script>
+</body>
+</html>
